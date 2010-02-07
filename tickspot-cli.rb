@@ -63,7 +63,8 @@ module TickspotCli
         initialize_opts cmds
       end
     end
-
+  
+    # Continue processing, load in config file.
     def continue(command, opts)
       @p = Printer.new
       @p.header "Tickspot CLI > "+command.capitalize
@@ -80,6 +81,7 @@ module TickspotCli
       self.send command
     end
 
+    # Initial global options and help information.
     def initialize_opts(stop_cmds)
       opts = Trollop::options do
         banner "Tickspot CLI interface"
@@ -91,13 +93,24 @@ module TickspotCli
       end
     end
 
+    # Should parse:
+    # :30 => 30
+    # 1h => 60
+    # 30m => 30
+    # 1h30m => 90
+    # 0:30 => 30
+    # 1.5 => 90
+    # 1 => 60
+    # 0.5 => 30
+    # 16 => 16 -- >10 hours are assumed to be minutes
+    # 8 => 480
     def parse_time(timestr)
       return 0 if timestr.nil?
       
       h = 0
       m = 0
 
-      if(not timestr.index(/[hm]/i).nil?)
+      if(not timestr.index(/(h|m)/).nil?)
         h = timestr.scan(/(\d*)\s*h/i).flatten.last
         m = timestr.scan(/(\d*)\s*m/i).flatten.last
       elsif(not timestr.index(':').nil?)
@@ -105,12 +118,11 @@ module TickspotCli
         m = timestr.scan(/:\s*(\d{2})/).flatten.last
       elsif(not timestr.index(/\d*?(\/\d*)?/).nil?)
         h = timestr.to_f
-        if(h > 1)
+        if(h > 10)
           m = h
           h = 0
         end
       end
-
       (h.to_f * 60) + m.to_f
     end
 
@@ -122,7 +134,7 @@ module TickspotCli
       end
       emails = user || @tickspot.users.collect { |u| u.email }
 
-      today =  (@settings[:debug] && Date.parse('05-02-2010')) || Date.today
+      today = Date.today
       @p.header "Hours Logged for "+today.strftime("%d %b %Y")
       emails.each do |email|
         h = @tickspot.entries(today, today, :user_email => email).collect { |e|
@@ -133,19 +145,37 @@ module TickspotCli
     end
 
     def log
-      puts parse_time(":30")
       opts = Trollop::options do
-        banner "tickspot log [hours] \"[message]\""
+        banner "tickspot log [time] \"[message]\""
         opt :code, "Client/Project/Task code", :short => "-c" 
       end
 
-      hours  = ARGV.shift 
+      minutes = parse_time(ARGV.shift)
       message = ARGV.shift
-      if hours.nil? or message.nil?
-        @p.error "Hours and message must be provided."
+      if minutes.nil? or message.nil?
+        @p.error "Time and message must be provided."
       end
     end
   end
 end
 
 TickspotCli::App.new()
+
+=begin Just some time parsing tests
+tests = { 
+  ":30" => 30,
+  "1h" => 60,
+  "30m" => 30,
+  "1h30m" => 90,
+  "0:30" => 30,
+  "1.5" => 90,
+  "1" => 60,
+  "0.5" => 30,
+  "16" => 16,
+  "8" => 480,
+}
+app = TickspotCli::App.new
+tests.each do |k,v|
+  puts app.parse_time(k) == v
+end
+=end
