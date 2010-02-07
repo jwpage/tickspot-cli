@@ -52,7 +52,7 @@ module TickspotCli
   class App 
 
     def initialize()
-      cmds = %w{check}
+      cmds = %w{log check}
       opts = initialize_opts cmds
       comm = ARGV.shift
       if cmds.include? comm
@@ -91,6 +91,29 @@ module TickspotCli
       end
     end
 
+    def parse_time(timestr)
+      return 0 if timestr.nil?
+      
+      h = 0
+      m = 0
+
+      if(not timestr.index(/[hm]/i).nil?)
+        h = timestr.scan(/(\d*)\s*h/i).flatten.last
+        m = timestr.scan(/(\d*)\s*m/i).flatten.last
+      elsif(not timestr.index(':').nil?)
+        h = timestr.scan(/(\d+)\s*?:/).flatten.last
+        m = timestr.scan(/:\s*(\d{2})/).flatten.last
+      elsif(not timestr.index(/\d*?(\/\d*)?/).nil?)
+        h = timestr.to_f
+        if(h > 1)
+          m = h
+          h = 0
+        end
+      end
+
+      (h.to_f * 60) + m.to_f
+    end
+
   private
     def check
       user = ARGV.shift
@@ -110,12 +133,17 @@ module TickspotCli
     end
 
     def log
-      #
-      #opts = Trollop::options do
-      #  opt :code, "Client/Project/Task code", :short => "-c" 
-      #  opt :hours, "Hours", :short => "-h", :default => 0, :type => :int
-      #  opt :msg, "Message", :short => "-m", :default => ""
-      #end
+      puts parse_time(":30")
+      opts = Trollop::options do
+        banner "tickspot log [hours] \"[message]\""
+        opt :code, "Client/Project/Task code", :short => "-c" 
+      end
+
+      hours  = ARGV.shift 
+      message = ARGV.shift
+      if hours.nil? or message.nil?
+        @p.error "Hours and message must be provided."
+      end
     end
   end
 end
