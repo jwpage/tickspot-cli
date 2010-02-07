@@ -1,0 +1,5 @@
+---
+:tickspot_domain: you.tickspot.com
+:tickspot_email: you@domain.com
+:tickspot_password: yourpassword
+:debug: false
