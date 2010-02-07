@@ -93,12 +93,11 @@ module TickspotCli
 
   private
     def check
-      opts = Trollop::options do
-        opt :user, "User email", :short => "-u", :default => 'all'
+      user = ARGV.shift
+      Trollop::options do
+        banner "tickspot check [user@email.com]"
       end
-
-      emails = (opts.user != 'all' && [opts.user]) ||
-        @tickspot.users.collect { |u| u.email }
+      emails = user || @tickspot.users.collect { |u| u.email }
 
       today =  (@settings[:debug] && Date.parse('05-02-2010')) || Date.today
       @p.header "Hours Logged for "+today.strftime("%d %b %Y")
@@ -111,7 +110,12 @@ module TickspotCli
     end
 
     def log
-
+      #
+      #opts = Trollop::options do
+      #  opt :code, "Client/Project/Task code", :short => "-c" 
+      #  opt :hours, "Hours", :short => "-h", :default => 0, :type => :int
+      #  opt :msg, "Message", :short => "-m", :default => ""
+      #end
     end
   end
 end
