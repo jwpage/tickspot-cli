@@ -10,6 +10,13 @@ class Tickspot
     te = request("clients_projects_tasks")
     te.empty? ? [] : te.clients
   end
+  def create_entry(task_id, hours, note)
+    te = request("create_entry", {
+      :task_id => task_id, 
+      :hours => hours, 
+      :note => note,
+      :date => Date.today.to_s})
+  end
 end
 class TickspotEntry
   def method_missing(method, *args)
@@ -23,7 +30,7 @@ class TickspotEntry
       end
     elsif @hash.has_key?(method.to_s)
       entry = @hash[method.to_s]
-      if method.to_s.pluralize == method.to_s && entry.class == Array
+      if method.to_s.pluralize == method.to_s && entry[0][method.to_s.singularize].class == Array
         return entry[0][method.to_s.singularize].collect {|e| TickspotEntry.new(e)}
       else
         return entry[0] unless entry[0].class == Hash && entry[0].has_key?("content")
@@ -82,7 +89,7 @@ module TickspotCli
 
     # Yeah, even though this class is called Printer
     def readline
-      Readline::readline(@tab * @indent + '> ')
+      Readline::readline(@tab * @indent + "> ")
     end
   end
 
@@ -150,7 +157,7 @@ module TickspotCli
       if(not timestr.index(/(h|m)/).nil?)
         h = timestr.scan(/(\d*)\s*h/i).flatten.last
         m = timestr.scan(/(\d*)\s*m/i).flatten.last
-      elsif(not timestr.index(':').nil?)
+      elsif(not timestr.index(":").nil?)
         h = timestr.scan(/(\d+)\s*?:/).flatten.last
         m = timestr.scan(/:\s*(\d{2})/).flatten.last
       elsif(not timestr.index(/\d*?(\/\d*)?/).nil?)
@@ -191,22 +198,30 @@ module TickspotCli
       @p.out.readline.to_i-1
     end
     def log
-      opts = Trollop::options do
-        banner "tickspot log [time] \"[message]\""
-        opt :code, "Client/Project/Task code", :short => "-c" 
+      minutes = parse_time(ARGV.shift)
+      if minutes.nil?
+        @p.error "Time must be provided."
       end
-      
-      if not opts[:code]  
+      opts = Trollop::options do
+        banner "tickspot log [time]  [-m \"message\"]"
+        opt :message, "Note", :short => "-m", :type => String
+        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+      end
+      puts opts.inspect
+
+      if not opts[:code]
         cpt = @tickspot.clients_projects_tasks
         client = log_select cpt, "client"
         project = log_select cpt[client].projects, "project"
-        tasks = log_select cpt[client].projects[project].tasks, "task"
-      end
+        task = log_select cpt[client].projects[project].tasks, "task"
 
-      minutes = parse_time(ARGV.shift)
-      message = ARGV.shift
-      if minutes.nil? or message.nil?
-        @p.error "Time and message must be provided."
+        task_id = cpt[client].projects[project].tasks[task].id
+      else
+        task_id = opts[:code]
+      end
+      @p.puts ""
+      if @tickspot.create_entry(task_id, minutes/60, opts[:message])
+        @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
       end
     end
   end
