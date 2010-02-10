@@ -107,7 +107,56 @@ module TickspotCli
         initialize_opts cmds
       end
     end
-  
+
+    # Check how much other users have tickspotted today.
+    def check
+      user = ARGV.shift
+      Trollop::options do
+        banner "tickspot check [user@email.com]"
+      end
+      emails = user || @tickspot.users.collect { |u| u.email }
+
+      today = Date.today
+      @p.header "Hours Logged for "+today.strftime("%d %b %Y")
+      emails.each do |email|
+        h = @tickspot.entries(today, today, :user_email => email).collect { |e|
+          e.hours.to_f
+        }.sum
+        @p.puts sprintf("%.2f hours logged by %s", h, email)
+      end
+    end
+
+   # Create a new tickspot entry.
+   def log
+      minutes = parse_time(ARGV.shift)
+      if minutes.nil?
+        @p.error "Time must be provided."
+      end
+      opts = Trollop::options do
+        banner "tickspot log [time]  [-m \"message\"]"
+        opt :message, "Note", :short => "-m", :type => String
+        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+      end
+      puts opts.inspect
+
+      if not opts[:code]
+        cpt = @tickspot.clients_projects_tasks
+        client = log_select cpt, "client"
+        project = log_select cpt[client].projects, "project"
+        task = log_select cpt[client].projects[project].tasks, "task"
+
+        task_id = cpt[client].projects[project].tasks[task].id
+      else
+        task_id = opts[:code]
+      end
+      @p.puts ""
+      if @tickspot.create_entry(task_id, minutes/60, opts[:message])
+        @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
+      end
+    end
+ 
+  private
+
     # Continue processing, load in config file.
     def continue(command, opts)
       @p = Printer.new
@@ -169,25 +218,8 @@ module TickspotCli
       end
       (h.to_f * 60) + m.to_f
     end
-
-  private
-    def check
-      user = ARGV.shift
-      Trollop::options do
-        banner "tickspot check [user@email.com]"
-      end
-      emails = user || @tickspot.users.collect { |u| u.email }
-
-      today = Date.today
-      @p.header "Hours Logged for "+today.strftime("%d %b %Y")
-      emails.each do |email|
-        h = @tickspot.entries(today, today, :user_email => email).collect { |e|
-          e.hours.to_f
-        }.sum
-        @p.puts sprintf("%.2f hours logged by %s", h, email)
-      end
-    end
-
+  
+    # Display 'Select a ' prompts for the log action.
     def log_select(arr, name)
       @p.puts ""
       @p.puts "Select a #{name}:"
@@ -197,34 +229,7 @@ module TickspotCli
       end
       @p.out.readline.to_i-1
     end
-    def log
-      minutes = parse_time(ARGV.shift)
-      if minutes.nil?
-        @p.error "Time must be provided."
-      end
-      opts = Trollop::options do
-        banner "tickspot log [time]  [-m \"message\"]"
-        opt :message, "Note", :short => "-m", :type => String
-        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
-      end
-      puts opts.inspect
-
-      if not opts[:code]
-        cpt = @tickspot.clients_projects_tasks
-        client = log_select cpt, "client"
-        project = log_select cpt[client].projects, "project"
-        task = log_select cpt[client].projects[project].tasks, "task"
-
-        task_id = cpt[client].projects[project].tasks[task].id
-      else
-        task_id = opts[:code]
-      end
-      @p.puts ""
-      if @tickspot.create_entry(task_id, minutes/60, opts[:message])
-        @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
-      end
-    end
-  end
+ end
 end
 
 TickspotCli::App.new()

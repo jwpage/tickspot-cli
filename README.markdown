@@ -13,8 +13,18 @@ Display help information:
 
 Display hours logged for all users, or one specific user:
 
-    ./tickspot-cli.rb check <user_email>
+    ./tickspot-cli.rb check [<user_email>]
 
 Log a Tickspot entry:
 
-    ./tickspot-cli.rb log <time> <message> [--code]
+    ./tickspot-cli.rb log <time> [-m <log_message>] [--code <task_id>]
+
+
+## Gem Requires ##
+
+* readline
+* trollop
+* tickspot
+* yaml
+
+
