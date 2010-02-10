@@ -11,6 +11,29 @@ class Tickspot
     te.empty? ? [] : te.clients
   end
 end
+class TickspotEntry
+  def method_missing(method, *args)
+    if @hash.has_key?(method.to_s.singularize)
+      entry = @hash[method.to_s.singularize]
+      if method.to_s.pluralize == method.to_s && entry.class == Array
+        return entry.collect {|e| TickspotEntry.new(e)}
+      else
+        return entry[0] unless entry[0].class == Hash && entry[0].has_key?("content")
+        return entry[0]["content"]
+      end
+    elsif @hash.has_key?(method.to_s)
+      entry = @hash[method.to_s]
+      if method.to_s.pluralize == method.to_s && entry.class == Array
+        return entry[0][method.to_s.singularize].collect {|e| TickspotEntry.new(e)}
+      else
+        return entry[0] unless entry[0].class == Hash && entry[0].has_key?("content")
+        return entry[0]["content"]
+      end
+    else
+      super 
+    end
+  end
+end
 
 module TickspotCli
   # A simple class for handling CLI output with indenting/outdenting.
@@ -158,10 +181,26 @@ module TickspotCli
       end
     end
 
+    def log_select(arr, name)
+      @p.puts ""
+      @p.puts "Select a #{name}:"
+      @p.in
+      arr.each_with_index do |k, i|
+        @p.puts "#{i+1}. #{k.name}"
+      end
+      @p.out.readline.to_i-1
+    end
     def log
       opts = Trollop::options do
         banner "tickspot log [time] \"[message]\""
         opt :code, "Client/Project/Task code", :short => "-c" 
+      end
+      
+      if not opts[:code]  
+        cpt = @tickspot.clients_projects_tasks
+        client = log_select cpt, "client"
+        project = log_select cpt[client].projects, "project"
+        tasks = log_select cpt[client].projects[project].tasks, "task"
       end
 
       minutes = parse_time(ARGV.shift)
