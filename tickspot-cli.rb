@@ -1,7 +1,16 @@
+#!/usr/bin/ruby
 require "rubygems"
+require "readline"
 require "trollop"
 require "tickspot"
 require "yaml"
+
+class Tickspot
+  def clients_projects_tasks
+    te = request("clients_projects_tasks")
+    te.empty? ? [] : te.clients
+  end
+end
 
 module TickspotCli
   # A simple class for handling CLI output with indenting/outdenting.
@@ -46,6 +55,11 @@ module TickspotCli
       msg = "Error: "+msg
       STDOUT.puts format("-" * msg.length, msg, "-" * msg.length)
       exit
+    end
+
+    # Yeah, even though this class is called Printer
+    def readline
+      Readline::readline(@tab * @indent + '> ')
     end
   end
 
