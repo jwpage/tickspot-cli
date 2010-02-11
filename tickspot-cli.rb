@@ -14,10 +14,11 @@ class Tickspot
     te = request("create_entry", {
       :task_id => task_id, 
       :hours => hours, 
-      :note => note,
+      :notes => note,
       :date => Date.today.to_s})
   end
 end
+
 class TickspotEntry
   def method_missing(method, *args)
     if @hash.has_key?(method.to_s.singularize)
@@ -96,7 +97,7 @@ module TickspotCli
   class App 
 
     def initialize()
-      cmds = %w{log check}
+      cmds = %w{log check today}
       opts = initialize_opts cmds
       comm = ARGV.shift
       if cmds.include? comm
@@ -107,6 +108,23 @@ module TickspotCli
         initialize_opts cmds
       end
     end
+    
+    # Get a user's current entries for the day
+    def today
+      user = ARGV.shift || @settings[:tickspot_email]
+      Trollop::options do
+        banner "tickspot today [user@email.com]"
+      end
+      day = Date.today
+      @p.header "Entries Logged for "+day.strftime("%d %b %Y")
+      total = 0
+      @tickspot.entries(day.to_s, day.to_s, :user_email => user).each_with_index do |e, i|
+        @p.puts "#{i+1}. #{e.hours} hours: #{e.client_name}> #{e.project_name}> #{e.task_name} - #{e.notes}"
+        total = total + e.hours.to_f
+      end
+      @p.puts ""
+      @p.puts "TOTAL: #{total} hours"
+    end
 
     # Check how much other users have tickspotted today.
     def check
@@ -116,10 +134,10 @@ module TickspotCli
       end
       emails = user || @tickspot.users.collect { |u| u.email }
 
-      today = Date.today
-      @p.header "Hours Logged for "+today.strftime("%d %b %Y")
+      day = Date.today
+      @p.header "Hours Logged for "+day.strftime("%d %b %Y")
       emails.each do |email|
-        h = @tickspot.entries(today, today, :user_email => email).collect { |e|
+        h = @tickspot.entries(day, day, :user_email => email).collect { |e|
           e.hours.to_f
         }.sum
         @p.puts sprintf("%.2f hours logged by %s", h, email)
@@ -137,7 +155,6 @@ module TickspotCli
         opt :message, "Note", :short => "-m", :type => String
         opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
       end
-      puts opts.inspect
 
       if not opts[:code]
         cpt = @tickspot.clients_projects_tasks
