@@ -152,7 +152,7 @@ module TickspotCli
       end
       opts = Trollop::options do
         banner "tickspot log [time]  [-m \"message\"]"
-        opt :message, "Note", :short => "-m", :type => String
+        opt :message, "Note", :short => "-m", :type => String, :default => ""
         opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
       end
 
