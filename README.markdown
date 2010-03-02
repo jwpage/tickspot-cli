@@ -19,6 +19,9 @@ Log a Tickspot entry:
 
     ./tickspot-cli.rb log <time> [-m <log_message>] [--code <task_id>]
 
+## TODO ##
+
+* Replace Printer class with Highline for prettiness?
 
 ## Gem Requires ##
 

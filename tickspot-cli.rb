@@ -168,7 +168,12 @@ module TickspotCli
       end
       @p.puts ""
       if @tickspot.create_entry(task_id, minutes/60, opts[:message])
-        @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
+        if opts[:code]
+          @p.puts "Created entry."
+        else
+          @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
+        
+        end
       end
     end
  
