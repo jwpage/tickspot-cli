@@ -44,6 +44,37 @@ class TickspotEntry
 end
 
 module TickspotCli
+  # Simple class for handling YAML files
+  class Settings
+    @@data = nil
+    @@filename = nil
+
+    def self.load(filename)
+      return if @@data
+
+      if File.exist? filename
+        @@filename = filename
+        @@data = YAML.load_file filename
+      else
+        @@data = {}
+      end
+    end
+
+    def self.[](key)
+      @@data[key]
+    end
+
+    def self.[]=(key, value)
+      @@data[key] = value
+      @@data.delete(key) if value.nil?
+    end
+
+    def self.save
+      File.open(@@filename, "w") do |out|
+        out.puts @@data.to_yaml
+      end
+    end
+  end
   # A simple class for handling CLI output with indenting/outdenting.
   class Printer
     
@@ -97,7 +128,7 @@ module TickspotCli
   class App 
 
     def initialize()
-      cmds = %w{log check today}
+      cmds = %w{log check today start stop}
       opts = initialize_opts cmds
       comm = ARGV.shift
       if cmds.include? comm
@@ -108,10 +139,25 @@ module TickspotCli
         initialize_opts cmds
       end
     end
+
+    def start
+      Settings[:tickspot_start] = Time.now()
+      Settings.save
+    end
+
+    def stop
+      started = Settings[:tickspot_start]
+      hours = (((Time.now() - started) / 60 / 60) * 100).ceil.to_f / 100
+      Settings[:tickspot_start] = nil
+      Settings.save
+      # Show chooser
+      # Log time
+
+    end
     
     # Get a user's current entries for the day
     def today
-      user = ARGV.shift || @settings[:tickspot_email]
+      user = ARGV.shift || Settings[:tickspot_email]
       Trollop::options do
         banner "tickspot today [user@email.com]"
       end
@@ -186,12 +232,12 @@ module TickspotCli
       @p.in
 
       if File.exist? opts.config
-        @settings = YAML.load_file(opts.config)
+        Settings.load opts.config
       else
         @p.error "Could not find config file "+opts.config
       end
-      @tickspot = Tickspot.new(@settings[:tickspot_domain], 
-        @settings[:tickspot_email], @settings[:tickspot_password])
+      @tickspot = Tickspot.new(Settings[:tickspot_domain], 
+        Settings[:tickspot_email], Settings[:tickspot_password])
 
       self.send command
     end

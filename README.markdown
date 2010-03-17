@@ -22,6 +22,7 @@ Log a Tickspot entry:
 ## TODO ##
 
 * Replace Printer class with Highline for prettiness?
+* Add `tickspot start` and `tickspot stop -m "message"`
 
 ## Gem Requires ##
 
