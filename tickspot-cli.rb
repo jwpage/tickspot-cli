@@ -143,13 +143,33 @@ module TickspotCli
     def start
       Settings[:tickspot_start] = Time.now()
       Settings.save
+      @p.puts "Started timer."
     end
 
     def stop
+      opts = Trollop::options do
+        banner "tickspot stop  [-m \"message\"] [-c code]"
+        opt :message, "Note", :short => "-m", :type => String, :default => ""
+        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+      end
+
       started = Settings[:tickspot_start]
+      if not started
+        @p.error  "You should probably start the timer first. "+
+                  "Try `tickspot-cli.rb start`"
+        return
+      end
+
       hours = (((Time.now() - started) / 60 / 60) * 100).ceil.to_f / 100
       Settings[:tickspot_start] = nil
       Settings.save
+      
+      task_id = get_task_id(opts[:code])
+      @p.puts ""
+      if @tickspot.create_entry(task_id, hours, opts[:message])
+        @p.puts "Stopped timer. Created entry for #{hours} hours."
+      end
+
       # Show chooser
       # Log time
 
@@ -202,7 +222,21 @@ module TickspotCli
         opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
       end
 
-      if not opts[:code]
+      task_id = get_task_id(opts[:code])
+      @p.puts ""
+      if @tickspot.create_entry(task_id, minutes/60, opts[:message])
+        if opts[:code]
+          @p.puts "Created entry."
+        else
+          @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
+        end
+      end
+    end
+ 
+  private
+
+    def get_task_id(code)
+      if not code
         cpt = @tickspot.clients_projects_tasks
         client = log_select cpt, "client"
         project = log_select cpt[client].projects, "project"
@@ -210,20 +244,9 @@ module TickspotCli
 
         task_id = cpt[client].projects[project].tasks[task].id
       else
-        task_id = opts[:code]
-      end
-      @p.puts ""
-      if @tickspot.create_entry(task_id, minutes/60, opts[:message])
-        if opts[:code]
-          @p.puts "Created entry."
-        else
-          @p.puts "Created entry. In the future you can use '--code #{task_id}' for this task."
-        
-        end
+        task_id = code
       end
     end
- 
-  private
 
     # Continue processing, load in config file.
     def continue(command, opts)
