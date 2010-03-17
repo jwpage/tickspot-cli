@@ -128,7 +128,7 @@ module TickspotCli
   class App 
 
     def initialize()
-      cmds = %w{log check today start stop}
+      cmds = %w{log check today start stop memorize}
       opts = initialize_opts cmds
       comm = ARGV.shift
       if cmds.include? comm
@@ -173,6 +173,18 @@ module TickspotCli
       # Show chooser
       # Log time
 
+    end
+
+    def memorize
+      name = ARGV.shift.downcase
+      opts = Trollop::options do
+        banner "tickspot memorize <name> [-c code]"
+        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+      end
+      task_id = get_task_id(opts[:code])
+      Settings[('memorize_code_'+name).to_sym] = task_id
+      Settings.save
+      @p.puts "Saved Task ID #{task_id} as #{name}"
     end
     
     # Get a user's current entries for the day
@@ -235,7 +247,7 @@ module TickspotCli
  
   private
 
-    def get_task_id(code)
+    def get_task_id(code=nil)
       if not code
         cpt = @tickspot.clients_projects_tasks
         client = log_select cpt, "client"
@@ -244,8 +256,10 @@ module TickspotCli
 
         task_id = cpt[client].projects[project].tasks[task].id
       else
-        task_id = code
+        task_id = Settings[('memorize_code_'+code).to_sym] || code
       end
+
+      task_id
     end
 
     # Continue processing, load in config file.
