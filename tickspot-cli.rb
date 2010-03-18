@@ -150,7 +150,7 @@ module TickspotCli
       opts = Trollop::options do
         banner "tickspot stop  [-m \"message\"] [-c code]"
         opt :message, "Note", :short => "-m", :type => String, :default => ""
-        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+        opt :code, "Client/Project/Task code", :short => "-c", :type => String
       end
 
       started = Settings[:tickspot_start]
@@ -179,7 +179,7 @@ module TickspotCli
       name = ARGV.shift.downcase
       opts = Trollop::options do
         banner "tickspot memorize <name> [-c code]"
-        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+        opt :code, "Client/Project/Task code", :short => "-c", :type => String
       end
       task_id = get_task_id(opts[:code])
       Settings[('memorize_code_'+name).to_sym] = task_id
@@ -231,7 +231,7 @@ module TickspotCli
       opts = Trollop::options do
         banner "tickspot log [time]  [-m \"message\"]"
         opt :message, "Note", :short => "-m", :type => String, :default => ""
-        opt :code, "Client/Project/Task code", :short => "-c", :type => :int 
+        opt :code, "Client/Project/Task code", :short => "-c", :type => String
       end
 
       task_id = get_task_id(opts[:code])
